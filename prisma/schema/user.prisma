@@ -1,0 +1,38 @@
+model User {
+  id        String  @id @default(uuid()) @db.Uuid
+  email     String  @unique
+  password  String?
+  username  String?
+  firstName String?
+  lastName  String?
+
+  providers Provider[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email], map: "idx_user_email")
+}
+
+model Provider {
+  id String @id @default(uuid()) @db.Uuid
+
+  user   User?   @relation(fields: [userId], references: [id])
+  userId String? @db.Uuid
+
+  type       ProviderType
+  providerId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId], map: "idx_provider_user_id")
+  @@index([providerId], map: "idx_provider_provider_id")
+}
+
+enum ProviderType {
+  EMAIL
+  GOOGLE
+  FACEBOOK
+  MAGICLINK
+}

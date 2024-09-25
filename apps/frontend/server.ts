@@ -1,3 +1,4 @@
+import proxy from 'express-http-proxy';
 import { APP_BASE_HREF } from '@angular/common';
 import { CommonEngine } from '@angular/ssr';
 import express from 'express';
@@ -17,9 +18,8 @@ export function app(): express.Express {
   server.set('view engine', 'html');
   server.set('views', browserDistFolder);
 
-  // Example Express Rest API endpoints
-  // server.get('/api/**', (req, res) => { });
-  // Serve static files from /browser
+  server.use('/api/**', proxy('http://localhost:3000'));
+
   server.get(
     '**',
     express.static(browserDistFolder, {

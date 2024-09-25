@@ -15,7 +15,10 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@fullstack-template/interfaces": ["libs/interfaces/src/index.ts"]
+      "@fullstack-template/backend": ["apps/backend/src"],
+      "@fullstack-template/interfaces": ["libs/interfaces/src/index.ts"],
+      "@fullstack-template/models": ["libs/models/src/index.ts"],
+      "@fullstack-template/schemas": ["libs/schemas/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

@@ -1,8 +1,6 @@
-import { Message } from '@fullstack-template/interfaces';
-import { Component, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { NxWelcomeComponent } from './nx-welcome.component';
-import { HttpClient } from '@angular/common/http';
 import { AsyncPipe, JsonPipe } from '@angular/common';
 
 @Component({
@@ -14,5 +12,4 @@ import { AsyncPipe, JsonPipe } from '@angular/common';
 })
 export class AppComponent {
   title = 'frontend';
-  hello$ = inject(HttpClient).get<Message>('/api');
 }
