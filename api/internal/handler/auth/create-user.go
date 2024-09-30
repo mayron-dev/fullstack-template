@@ -9,6 +9,7 @@ import (
 	"github.com/mayron1806/go-api/internal/helper"
 	"github.com/mayron1806/go-api/internal/model"
 	"github.com/mayron1806/go-api/internal/template"
+	"gorm.io/gorm"
 )
 
 type CreateUserRequest struct {
@@ -28,31 +29,44 @@ func (h *AuthHandler) CreateUser(c *gin.Context) {
 		h.ResponseError(c, http.StatusBadRequest, "error hashing password: %s", err.Error())
 		return
 	}
+	// verify if email already exists
+	userWithEmail, err := h.queryUser.GetUserByEmail(request.Email)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		h.ResponseError(c, http.StatusBadRequest, "error finding user: %s", err.Error())
+		return
+	}
+	if userWithEmail != nil {
+		h.ResponseError(c, http.StatusBadRequest, "email already exists")
+		return
+	}
+
 	user := model.User{
 		Email:     request.Email,
 		Name:      request.Name,
 		Password:  hashedPassword,
 		Challenge: model.UserChallengeVerifyEmail,
-		Account:   model.Account{},
 	}
-	err = h.db.Create(&user).Error
+	tx := h.db.Begin()
+	err = tx.Create(&user).Error
 	if err != nil {
+		tx.Rollback()
 		h.ResponseError(c, http.StatusBadRequest, "error creating user: %s", err.Error())
 		return
 	}
-
-	h.Logger.Infof("user created: %s", request.Email)
 	token := model.Token{
 		Key:       uuid.New(),
 		UserID:    user.ID,
 		Type:      model.ActiveAccount,
 		ExpiresAt: time.Now().Add(time.Hour * 24),
 	}
-	err = h.db.Create(&token).Error
+	err = tx.Create(&token).Error
 	if err != nil {
+		tx.Rollback()
 		h.ResponseError(c, http.StatusBadRequest, "error creating token: %s", err.Error())
 		return
 	}
+
+	tx.Commit()
 	h.emailService.SendEmail(request.Email, "User created", template.GetActiveAccountTemplate(token.Key.String()))
 
 	c.Status(http.StatusCreated)

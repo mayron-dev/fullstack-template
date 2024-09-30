@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mayron1806/go-api/internal/goauth2"
 	"github.com/mayron1806/go-api/internal/model"
+	"github.com/mayron1806/go-api/internal/plan"
 )
 
 func (h *AuthHandler) OAuthCallback(c *gin.Context) {
@@ -17,11 +18,11 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 		h.ResponseError(c, http.StatusBadRequest, "error authorizing: %s", err.Error())
 		return
 	}
-
+	tx := h.db.Begin()
 	var userWithEmail model.User
-	err = h.db.
+	err = tx.
 		Preload("Providers").
-		Preload("Account").
+		Preload("Members").
 		Attrs(model.User{
 			Name:      authorizedToken.Name,
 			Email:     authorizedToken.Email,
@@ -31,21 +32,40 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 		FirstOrCreate(&userWithEmail, "users.email = ?", authorizedToken.Email).
 		Error
 	if err != nil {
+		tx.Rollback()
 		h.ResponseError(c, http.StatusBadRequest, "error authorizing: %s", err.Error())
 		return
 	}
-	// cria conta se não existe
-	if userWithEmail.Account.ID == "" {
-		userWithEmail.Account = model.Account{Active: true}
-		if err := h.db.Save(&userWithEmail).Error; err != nil {
-			h.ResponseError(c, http.StatusBadRequest, "error authorizing: %s", err.Error())
+	// cria grupo se não existe
+	var activeMembers []model.Member
+	for _, member := range userWithEmail.Members {
+		if member.Active {
+			activeMembers = append(activeMembers, member)
+		}
+	}
+	if len(activeMembers) == 0 {
+		defaultPlan := plan.DefaultPlan()
+		organization := model.Organization{
+			PlanCode: defaultPlan.Code,
+			Members: []model.Member{
+				{
+					UserID: userWithEmail.ID,
+					Owner:  true,
+					Active: true,
+				},
+			},
+		}
+		err = tx.Create(&organization).Error
+		if err != nil {
+			tx.Rollback()
+			h.ResponseError(c, http.StatusBadRequest, "error creating organization: %s", err.Error())
 			return
 		}
 	}
 
 	// add provider if not found
 	var socialProvider model.SocialProvider
-	err = h.db.
+	err = tx.
 		Where("provider = ? AND user_id = ?", provider, userWithEmail.ID).
 		Attrs(model.SocialProvider{
 			Email:         authorizedToken.Email,
@@ -58,6 +78,7 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 		}).FirstOrCreate(&socialProvider).Error
 
 	if err != nil {
+		tx.Rollback()
 		h.ResponseError(c, http.StatusBadRequest, "error authorizing: %s", err.Error())
 		return
 	}

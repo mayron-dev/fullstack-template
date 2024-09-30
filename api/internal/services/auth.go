@@ -13,12 +13,10 @@ import (
 
 type TokenType string
 type JWTData struct {
-	UserID    uint           `json:"user_id"`
-	AccountID string         `json:"account_id"`
-	Provider  string         `json:"provider"`
-	Email     string         `json:"email"`
-	Type      model.UserType `json:"type"`
-	Plan      string         `json:"plan"`
+	UserID   uint           `json:"user_id"`
+	Provider string         `json:"provider"`
+	Email    string         `json:"email"`
+	Type     model.UserType `json:"type"`
 }
 type JWTClaims struct {
 	jwt.StandardClaims
@@ -68,12 +66,10 @@ func (s *AuthService) GenerateAccessToken(user *model.User, provider string) (To
 		IssuedAt:  time.Now().Unix(),
 		Issuer:    s.issuer,
 		Data: JWTData{
-			UserID:    user.ID,
-			Provider:  provider,
-			Type:      user.Type,
-			Email:     user.Email,
-			AccountID: user.Account.ID,
-			Plan:      user.Account.Plan,
+			UserID:   user.ID,
+			Provider: provider,
+			Type:     user.Type,
+			Email:    user.Email,
 		},
 	})
 	signedToken, err := token.SignedString([]byte(s.secret))

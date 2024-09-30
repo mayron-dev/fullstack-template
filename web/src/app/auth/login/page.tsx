@@ -9,8 +9,10 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FcGoogle } from 'react-icons/fc';
+import { useRouter } from 'next/navigation';
 
 const SigninForm = () => {
+  const router = useRouter();
   const form = useForm<SigninSchema>({
     resolver: zodResolver(signinSchema),
   });
@@ -24,9 +26,7 @@ const SigninForm = () => {
       body: JSON.stringify(data),
     });
 
-    if (res.ok) {
-      
-    }
+    if (res.ok) router.push('/');
   })  
   return (
     <div className="max-w-md mx-auto">

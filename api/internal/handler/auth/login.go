@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mayron1806/go-api/internal/helper"
 	"github.com/mayron1806/go-api/internal/model"
+	"github.com/mayron1806/go-api/internal/plan"
 	"github.com/mayron1806/go-api/internal/template"
 	"gorm.io/gorm"
 )
@@ -25,12 +26,12 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	var user model.User
 	if helper.VerifyIsEmail(request.Account) {
-		if err := h.db.Where("email = ?", request.Account).Preload("Account").First(&user).Error; err != nil {
+		if err := h.db.Where("email = ?", request.Account).Preload("Members").First(&user).Error; err != nil {
 			h.ResponseError(c, http.StatusBadRequest, "error finding user: %s", err.Error())
 			return
 		}
 	} else {
-		if err := h.db.Where("name = ?", request.Account).Preload("Account").First(&user).Error; err != nil {
+		if err := h.db.Where("name = ?", request.Account).Preload("Members").First(&user).Error; err != nil {
 			h.ResponseError(c, http.StatusBadRequest, "error finding user: %s", err.Error())
 			return
 		}
@@ -65,6 +66,31 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	// cria grupo se não existe
+	var activeMembers []model.Member
+	for _, member := range user.Members {
+		if member.Active {
+			activeMembers = append(activeMembers, member)
+		}
+	}
+	if len(activeMembers) == 0 {
+		defaultPlan := plan.DefaultPlan()
+		organization := model.Organization{
+			PlanCode: defaultPlan.Code,
+			Members: []model.Member{
+				{
+					UserID: user.ID,
+					Owner:  true,
+					Active: true,
+				},
+			},
+		}
+		err := h.db.Create(&organization).Error
+		if err != nil {
+			h.ResponseError(c, http.StatusBadRequest, "error creating organization: %s", err.Error())
+			return
+		}
+	}
 	// generate tokens
 	tokens, err := h.authService.GenerateTokens(&user, "credentials", &model.RefreshTokenPayload{Type: "credentials"})
 	if err != nil {

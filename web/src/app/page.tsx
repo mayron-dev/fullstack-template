@@ -1,14 +1,16 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-export default function Home() {
-  const cookiesList = cookies().getAll();
+// selecao
+export default function Select() {
+  // verificar se existe o cookie com codigo da organizacao
+  // se existir, redirecionar para o dashboard da organizacao
+  const organizationCookie = cookies().get("organization-code");
+  if (organizationCookie) {
+    redirect("/app")
+  }
+  // pega as organizacoes do usuario e as lista
   return (
-    <pre>
-      {
-        cookiesList
-          .map((cookie) => `${cookie.name}: ${cookie.value}`)
-          .join("\n")
-      }
-    </pre>
+    <div></div>
   );
 }
